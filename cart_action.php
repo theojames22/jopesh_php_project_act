@@ -46,7 +46,7 @@ if ($action === 'add') {
             'id' => $product['id'],
             'name' => $product['name'],
             'price' => (float)$product['price'],
-            'image_url' => $product['image_url'],
+            'image_url' => jopesh_asset_url($product['image_url']),
             'size' => $product['size']
         ];
     }

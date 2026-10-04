@@ -29,7 +29,8 @@ while ($p = mysqli_fetch_assoc($res)) {
           <div class="product-card">
             <div class="product-media">
               <?php if (!empty($piece['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($piece['image_url']); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <img src="<?php echo htmlspecialchars(jopesh_asset_url($piece['image_url'])); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <div class="card-photo-watermark">Jopesh</div>
               <?php else: ?>
                 <div class="art-placeholder">
                   <div class="art-placeholder-text">1 of 1 Wearable Art</div>

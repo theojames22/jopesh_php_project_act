@@ -308,43 +308,47 @@ function initPurchaseButtons() {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       const productId = btn.dataset.productId;
-      const isAuth = window.JOPESH_USER_LOGGED_IN === true;
+      window.handleAddToCart(productId);
+    });
+  });
 
-      // User must be logged in to buy!
-      if (!isAuth) {
-        window.openAuthModal(
-          'login',
-          'Authentication Required: Please log in or register before acquiring 1-of-1 wearable art pieces.'
-        );
+  window.handleAddToCart = async function (productId) {
+    const isAuth = window.JOPESH_USER_LOGGED_IN === true;
+
+    // User must be logged in to buy!
+    if (!isAuth) {
+      window.openAuthModal(
+        'login',
+        'Authentication Required: Please log in or register before acquiring 1-of-1 wearable art pieces.'
+      );
+      return;
+    }
+
+    // Add to cart via AJAX
+    const formData = new FormData();
+    formData.append('action', 'add');
+    formData.append('product_id', productId);
+
+    try {
+      const res = await fetch('cart_action.php', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.login_required) {
+        window.openAuthModal('login', data.message);
         return;
       }
 
-      // Add to cart via AJAX
-      const formData = new FormData();
-      formData.append('action', 'add');
-      formData.append('product_id', productId);
-
-      try {
-        const res = await fetch('cart_action.php', { method: 'POST', body: formData });
-        const data = await res.json();
-
-        if (data.login_required) {
-          window.openAuthModal('login', data.message);
-          return;
-        }
-
-        if (data.success) {
-          showToast(data.message, 'success');
-          updateCartBadge(data.cart_count);
-          if (window.openCartDrawer) window.openCartDrawer();
-        } else {
-          showToast(data.message, 'error');
-        }
-      } catch (err) {
-        showToast('Error adding piece to bag.', 'error');
+      if (data.success) {
+        showToast(data.message, 'success');
+        updateCartBadge(data.cart_count);
+        if (window.openCartDrawer) window.openCartDrawer();
+      } else {
+        showToast(data.message, 'error');
       }
-    });
-  });
+    } catch (err) {
+      showToast('Error adding piece to bag.', 'error');
+    }
+  };
 }
 
 function updateCartBadge(count) {

@@ -16,19 +16,129 @@ if (!$latestCollection && count($collections) > 0) {
     $latestCollection = $collections[0];
 }
 
-// 2. Fetch Latest Collection Items for Section 3 ("Malupit na bola")
+// 2. Fetch Latest Collection Items for Section 3 ("Jopesh's Piece of Art" 3D Sphere)
 $latestColId = $latestCollection ? (int)$latestCollection['id'] : 1;
-$sphereQuery = mysqli_query($conn, "SELECT id, name, price, image_url, status FROM products WHERE collection_id = $latestColId OR is_sphere_highlight = 1 LIMIT 24");
-$sphereItems = [];
-while ($item = mysqli_fetch_assoc($sphereQuery)) {
-    $sphereItems[] = [
-        'id' => $item['id'],
-        'name' => $item['name'],
-        'price' => (float)$item['price'],
-        'image' => $item['image_url'],
-        'status' => $item['status']
-    ];
+$sphereCards = [];
+
+// Get all products from Nocturne
+$pQuery = mysqli_query($conn, "SELECT * FROM products WHERE collection_id = $latestColId ORDER BY id ASC");
+$nocturneProducts = [];
+$productsByName = [];
+while ($row = mysqli_fetch_assoc($pQuery)) {
+    $nocturneProducts[] = $row;
+    $productsByName[strtolower(trim($row['name']))] = $row;
 }
+
+$collectionsDataFile = __DIR__ . '/collections_data.json';
+if (file_exists($collectionsDataFile)) {
+    $colJson = json_decode(file_get_contents($collectionsDataFile), true);
+    if (!empty($colJson['nocturne']['pieces'])) {
+        $pieces = $colJson['nocturne']['pieces'];
+
+        // 1. First pass: Front / Primary image of each piece
+        foreach ($pieces as $piece) {
+            $pName = $piece['name'];
+            $matched = null;
+            foreach ($productsByName as $k => $prod) {
+                if (stripos($k, strtolower($pName)) !== false || stripos(strtolower($pName), $k) !== false) {
+                    $matched = $prod;
+                    break;
+                }
+            }
+
+            $sphereCards[] = [
+                'id' => $matched ? (int)$matched['id'] : 1,
+                'name' => $pName,
+                'price' => $matched ? (float)$matched['price'] : 3800.00,
+                'image' => jopesh_asset_url($piece['primary_image']),
+                'description' => !empty($piece['description']) ? $piece['description'] : ($matched ? $matched['description'] : '1 of 1 Wearable Art'),
+                'size' => $matched ? $matched['size'] : '1 of 1 (Custom Fit)',
+                'status' => $matched ? $matched['status'] : 'available'
+            ];
+        }
+
+        // 2. Second pass: Back or detailed image of each piece
+        foreach ($pieces as $piece) {
+            $pName = $piece['name'];
+            $matched = null;
+            foreach ($productsByName as $k => $prod) {
+                if (stripos($k, strtolower($pName)) !== false || stripos(strtolower($pName), $k) !== false) {
+                    $matched = $prod;
+                    break;
+                }
+            }
+
+            $secondImg = '';
+            foreach ($piece['images'] as $img) {
+                if ($img !== $piece['primary_image'] && (stripos($img, 'back') !== false || stripos($img, 'detailed 2') !== false || stripos($img, 'sample') !== false)) {
+                    $secondImg = $img;
+                    break;
+                }
+            }
+            if (!$secondImg && count($piece['images']) > 1) {
+                $secondImg = $piece['images'][1];
+            }
+            if ($secondImg) {
+                $sphereCards[] = [
+                    'id' => $matched ? (int)$matched['id'] : 1,
+                    'name' => $pName . ' (Detail)',
+                    'price' => $matched ? (float)$matched['price'] : 3800.00,
+                    'image' => jopesh_asset_url($secondImg),
+                    'description' => !empty($piece['description']) ? $piece['description'] : ($matched ? $matched['description'] : '1 of 1 Wearable Art'),
+                    'size' => $matched ? $matched['size'] : '1 of 1 (Custom Fit)',
+                    'status' => $matched ? $matched['status'] : 'available'
+                ];
+            }
+        }
+
+        // 3. Highlight detail shots to complete dense 24-card Fibonacci sphere
+        $heroExtras = [
+            'assets/images/jopesh collections/nocturne collection/𝐓𝐡𝐞 𝐃𝐚𝐠𝐠𝐞𝐫𝐥𝐢𝐧𝐞/the Daggerline back.jpg' => 'The Daggerline (Back Silhouette)',
+            'assets/images/jopesh collections/nocturne collection/𝐓𝐡𝐞 𝐒𝐩𝐞𝐜𝐭𝐫𝐞/back.jpg' => 'The Spectre (Back Silhouette)'
+        ];
+        foreach ($heroExtras as $extraPath => $extraName) {
+            if (count($sphereCards) < 24) {
+                $sphereCards[] = [
+                    'id' => 1,
+                    'name' => $extraName,
+                    'price' => 4500.00,
+                    'image' => jopesh_asset_url($extraPath),
+                    'description' => 'Detailed 1 of 1 reworked craftsmanship.',
+                    'size' => 'Medium - Large',
+                    'status' => 'auction'
+                ];
+            }
+        }
+    }
+}
+
+// Fallback safety if collections_data.json wasn't loaded
+if (count($sphereCards) === 0) {
+    $nocturneDir = __DIR__ . '/assets/images/jopesh collections/nocturne collection';
+    if (is_dir($nocturneDir)) {
+        foreach (scandir($nocturneDir) as $sd) {
+            if ($sd === '.' || $sd === '..') continue;
+            $dirPath = $nocturneDir . '/' . $sd;
+            if (is_dir($dirPath)) {
+                foreach (scandir($dirPath) as $f) {
+                    if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $f)) {
+                        $sphereCards[] = [
+                            'id' => 1,
+                            'name' => 'Nocturne Piece',
+                            'price' => 3800.00,
+                            'image' => jopesh_asset_url('assets/images/jopesh collections/nocturne collection/' . $sd . '/' . $f),
+                            'description' => '1 of 1 Wearable Art',
+                            'size' => '1 of 1',
+                            'status' => 'available'
+                        ];
+                    }
+                }
+            }
+        }
+    }
+}
+
+$sphereCards = array_slice($sphereCards, 0, 24);
 
 // 3. Fetch Active Auctions for Section 4
 $auctionsQuery = "
@@ -41,7 +151,6 @@ $auctionsQuery = "
 $auctionsResult = mysqli_query($conn, $auctionsQuery);
 $auctions = [];
 while ($auc = mysqli_fetch_assoc($auctionsResult)) {
-    // Get last 2 previous bids below highest bid
     $bidStmt = mysqli_prepare($conn, "SELECT bid_amount FROM bids WHERE auction_id = ? ORDER BY id DESC LIMIT 3");
     mysqli_stmt_bind_param($bidStmt, "i", $auc['id']);
     mysqli_stmt_execute($bidStmt);
@@ -56,19 +165,24 @@ while ($auc = mysqli_fetch_assoc($auctionsResult)) {
 }
 
 // 4. Fetch Available Pieces for Section 5 (Layout by fours)
-$availResult = mysqli_query($conn, "SELECT * FROM products WHERE status = 'available' ORDER BY id DESC LIMIT 12");
+$availResult = mysqli_query($conn, "SELECT * FROM products WHERE status = 'available' ORDER BY id ASC");
 $availablePieces = [];
 while ($p = mysqli_fetch_assoc($availResult)) {
     $availablePieces[] = $p;
 }
 
 // 5. Fetch Sold Pieces for Section 7 (Layout by fours)
-$soldResult = mysqli_query($conn, "SELECT * FROM products WHERE status = 'sold' ORDER BY id DESC LIMIT 12");
+$soldResult = mysqli_query($conn, "SELECT * FROM products WHERE status = 'sold' ORDER BY id ASC");
 $soldPieces = [];
 while ($p = mysqli_fetch_assoc($soldResult)) {
     $soldPieces[] = $p;
 }
 ?>
+
+<!-- Pass real Nocturne collection sphere items to JavaScript -->
+<script>
+  window.JOPESH_SPHERE_ITEMS = <?php echo json_encode($sphereCards, JSON_UNESCAPED_SLASHES); ?>;
+</script>
 
 <!-- SECTION 2: POSTERS (Latest to Oldest Carousel) -->
 <section class="posters-section" id="posters">
@@ -77,11 +191,7 @@ while ($p = mysqli_fetch_assoc($soldResult)) {
       <div class="posters-track" id="posters-track">
         <?php foreach ($collections as $index => $col): 
             $colPageUrl = "collection.php?slug=" . urlencode($col['slug']);
-            // Check if user has an image or we show a styled card
-            $posterImage = !empty($col['poster_image']) ? $col['poster_image'] : '';
-            if (empty($posterImage) && file_exists(__DIR__ . '/assets/images/poster_wear_yourself.jpg') && $index === 0) {
-                $posterImage = 'assets/images/poster_wear_yourself.jpg';
-            }
+            $posterImage = !empty($col['poster_image']) ? jopesh_asset_url($col['poster_image']) : '';
         ?>
           <div class="poster-slide" data-target-url="<?php echo $colPageUrl; ?>">
             <div class="poster-card">
@@ -126,36 +236,25 @@ while ($p = mysqli_fetch_assoc($soldResult)) {
   </div>
 </section>
 
-<!-- SECTION 3: MALUPIT NA BOLA (LATEST COLLECTION 3D SPHERE) -->
-<section class="sphere-section" id="latest-collection-sphere">
-  <div class="sphere-bg-watermark">
-    <?php echo htmlspecialchars($latestCollection ? $latestCollection['code'] : 'LATEST COLLECTION'); ?>
+<!-- SECTION 3: MALUPIT NA BOLA ("Jopesh's Piece of Art" 3D SPHERE) -->
+<section class="gallery-container" id="latest-collection-sphere">
+  <div class="sphere-section-header">
+    <span class="section-tag"><?php echo htmlspecialchars($latestCollection ? $latestCollection['code'] : 'LATEST COLLECTION'); ?> &bull; 1 OF 1</span>
+    <h2 class="section-title">Jopesh's Piece of Art</h2>
+    <p class="section-subtitle">
+      Scroll to rotate &bull; Drag to spin in 3D &bull; Click any piece to inspect
+    </p>
   </div>
 
-  <div class="container" style="position: relative; z-index: 2;">
-    <div class="section-header">
-      <span class="section-tag">Latest Collection Showcase</span>
-      <h2 class="section-title"><?php echo htmlspecialchars($latestCollection ? $latestCollection['title'] : 'The Latest Creations'); ?></h2>
-      <p class="section-subtitle">
-        Interactive 3D gallery. Grab and rotate to explore the latest 1-of-1 wearable art pieces.
-      </p>
-    </div>
-
-    <!-- The 3D Sphere Container -->
-    <div class="sphere-container" id="sphere-canvas"></div>
-    <div class="sphere-controls-hint">✦ Click & Drag or Swipe to Spin ✦</div>
+  <div class="scene">
+    <div class="sphere" id="sphere"></div>
   </div>
+
+  <svg class="network-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path d="M0,50 Q25,30 50,50 T100,50" stroke="rgba(255,255,255,0.06)" stroke-width="0.3" fill="none" />
+    <path d="M20,0 L80,100" stroke="rgba(255,255,255,0.04)" stroke-width="0.3" fill="none" />
+  </svg>
 </section>
-
-<!-- Pass JSON items to JavaScript JopeshSphere -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const sphereData = <?php echo json_encode($sphereItems); ?>;
-    if (window.JopeshSphere) {
-      new JopeshSphere('sphere-canvas', sphereData);
-    }
-  });
-</script>
 
 <!-- SECTION 4: ACTIVE BIDDING / AUCTIONS -->
 <section class="section-padding auctions-section" id="auctions">
@@ -180,7 +279,7 @@ while ($p = mysqli_fetch_assoc($soldResult)) {
               <!-- Thumbnail Photo -->
               <div class="auction-thumbnail">
                 <?php if (!empty($auc['image_url'])): ?>
-                  <img src="<?php echo htmlspecialchars($auc['image_url']); ?>" alt="<?php echo htmlspecialchars($auc['art_name']); ?>">
+                  <img src="<?php echo htmlspecialchars(jopesh_asset_url($auc['image_url'])); ?>" alt="<?php echo htmlspecialchars($auc['art_name']); ?>">
                 <?php else: ?>
                   <div class="art-placeholder" style="height: 100%;">
                     <div class="art-placeholder-text">1 of 1</div>
@@ -258,7 +357,8 @@ while ($p = mysqli_fetch_assoc($soldResult)) {
           <div class="product-card">
             <div class="product-media">
               <?php if (!empty($piece['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($piece['image_url']); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <img src="<?php echo htmlspecialchars(jopesh_asset_url($piece['image_url'])); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <div class="card-photo-watermark">Jopesh</div>
               <?php else: ?>
                 <div class="art-placeholder">
                   <div class="art-placeholder-text">1 of 1 Wearable Art</div>
@@ -344,7 +444,8 @@ while ($p = mysqli_fetch_assoc($soldResult)) {
 
             <div class="product-media">
               <?php if (!empty($piece['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($piece['image_url']); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <img src="<?php echo htmlspecialchars(jopesh_asset_url($piece['image_url'])); ?>" alt="<?php echo htmlspecialchars($piece['name']); ?>" loading="lazy">
+                <div class="card-photo-watermark">Jopesh</div>
               <?php else: ?>
                 <div class="art-placeholder">
                   <div class="art-placeholder-text">Archived 1/1</div>

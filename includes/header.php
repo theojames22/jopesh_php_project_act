@@ -16,6 +16,7 @@ $cartCount = getCartCount();
   </script>
 </head>
 <body>
+<div class="grid-overlay"></div>
 
 <!-- Left Side Navigation Drawer -->
 <div class="nav-drawer-overlay" id="nav-drawer-overlay">
@@ -63,8 +64,9 @@ $cartCount = getCartCount();
 
     <!-- Center: Jopesh Text Logo (redirects to Home) -->
     <div class="logo-wrapper">
-      <a href="index.php" class="brand-logo" title="Jopesh Home">JOPESH</a>
-      <span class="brand-tagline-sub">1 of 1 Wearable Art</span>
+      <a href="index.php" class="brand-logo" title="Jopesh Home">
+        <img src="assets/images/jopesh%20logo.png" alt="Jopesh" class="brand-logo-img">
+      </a>
     </div>
 
     <!-- Right: Account & Cart Actions -->
@@ -225,5 +227,36 @@ $cartCount = getCartCount();
         Bids on 1-of-1 wearable art pieces are binding. Highest bidder will be contacted at auction close.
       </p>
     </form>
+  </div>
+</div>
+
+<!-- Sphere Card Preview Modal (Clickable Cards on Sphere) -->
+<div class="modal-backdrop" id="sphere-card-modal">
+  <div class="modal-dialog" style="max-width: 480px; text-align: left;">
+    <button class="modal-close-btn" onclick="document.getElementById('sphere-card-modal').classList.remove('active')">&times;</button>
+    <div id="sphere-modal-badge" style="font-family: var(--font-display); font-size: 0.75rem; letter-spacing: 0.2em; color: var(--accent-red); text-transform: uppercase; margin-bottom: 0.4rem; font-weight: 700;">
+      NOCTURNE COLLECTION &bull; 1 OF 1
+    </div>
+    <h3 id="sphere-modal-title" style="font-family: var(--font-display); font-size: 1.35rem; color: #fff; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      Wearable Art Piece
+    </h3>
+    <div style="width: 100%; aspect-ratio: 4/5; border-radius: 12px; overflow: hidden; background: #121217; margin-bottom: 1rem; border: 1px solid var(--border-subtle); position: relative;">
+      <img id="sphere-modal-img" src="" alt="Piece Preview" style="width: 100%; height: 100%; object-fit: cover;">
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+      <span id="sphere-modal-price" style="font-size: 1.2rem; font-weight: 700; color: #fff; font-family: var(--font-display);">₱3,800</span>
+      <span id="sphere-modal-size" class="product-size-badge">1 of 1</span>
+    </div>
+    <p id="sphere-modal-desc" style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.2rem; max-height: 90px; overflow-y: auto;">
+      1 of 1 Wearable Art by Jopesh.
+    </p>
+    <div style="display: flex; gap: 0.8rem; justify-content: stretch;">
+      <button id="sphere-modal-action-btn" class="btn-buy" style="flex: 1; justify-content: center; text-align: center;">
+        Acquire 1-of-1 Piece
+      </button>
+      <button class="btn-buy" onclick="document.getElementById('sphere-card-modal').classList.remove('active')" style="background: transparent; border: 1px solid var(--border-subtle); width: auto; padding: 0.7rem 1.2rem;">
+        Close
+      </button>
+    </div>
   </div>
 </div>

@@ -29,4 +29,12 @@ function getCartCount() {
     }
     return count($_SESSION['cart']);
 }
+
+function jopesh_asset_url($path) {
+    if (empty($path)) return '';
+    if (preg_match('#^https?://#i', $path)) return $path;
+    $parts = explode('/', $path);
+    $encoded = array_map('rawurlencode', $parts);
+    return implode('/', $encoded);
+}
 ?>
